@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Wave Shooter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body{
+    margin:0;
+    font-family:"Arial","Helvetica",sans-serif;
+    background:#0d2a4d;
+    color:#f7f1d1;
+    text-align:center;
+  }
+  canvas{
+    display:block;
+    margin:0 auto;
+    border-radius:12px;
+    width:100%;
+    max-width:500px;
+    height:600px;
+    background:#0d2a4d;
+  }
+  h1{
+    margin:10px 0;
+    color:#f7f1d1;
+  }
+  #controls{margin:12px}
+  .btn{
+    padding:10px 16px;
+    margin:6px;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+    background:#1f3c70;
+    color:#f7f1d1;
+  }
+  .correct{background:#8df59a}
+  .wrong{background:#f77a7a}
+  .hud{margin:10px;font-size:18px}
+</style>
+</head>
+<body>
+<h1>Wave Shooter</h1>
+<canvas id="c" width="400" height="600"></canvas>
+<div class="hud">
+  <span>Score: <span id="score">0</span></span> |
+  <span>Lives: <span id="lives">5</span></span> |
+  <span>f = <span id="fDisplay">10</span> Hz</span>
+</div>
+<div id="controls"></div>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const W = canvas.width, H = canvas.height;
+
+let score=0, lives=5;
+let f=10; 
+let currentEnemy=null;
+let answered=false, totalDefeated=0;
+
+let waves=[]; // เก็บคลื่นยิง
+
+// สีศัตรูเหมือนภาพ
+const enemyColors = ["#4CAF50","#2196F3","#F44336"];
+
+function newEnemy(){
+  answered=false;
+  const v=50 + Math.floor(Math.random()*150); 
+  const lambda=v/f;
+  const x=Math.random()*(W-40)+20;
+  const color = enemyColors[Math.floor(Math.random()*enemyColors.length)];
+  currentEnemy={x, y:-20, v, lambda, alive:true, color};
+  makeChoices(lambda);
+}
+
+function makeChoices(correct){
+  const container=document.getElementById("controls");
+  container.innerHTML="";
+  let choices=[correct];
+  while(choices.length<3){
+    let wrong=correct + (Math.floor(Math.random()*5)-2)*5;
+    if(wrong<=0) continue;
+    if(!choices.includes(wrong)) choices.push(wrong);
+  }
+  choices.sort(()=>Math.random()-0.5);
+  for(let val of choices){
+    const btn=document.createElement("button");
+    btn.textContent="λ = "+val+" m";
+    btn.className="btn";
+    btn.onclick=()=>checkAnswer(val,correct,btn);
+    container.appendChild(btn);
+  }
+}
+
+function checkAnswer(val,correct,btn){
+  if(answered) return;
+  answered=true;
+  if(val===correct){
+    btn.classList.add("correct");
+    score+=50;
+    totalDefeated++;
+    fireWave();
+    setTimeout(()=>{
+      if(totalDefeated%5===0){
+        f=[10,20,25,50][(totalDefeated/5)%4]||10;
+      }
+    },1000);
+  }else{
+    btn.classList.add("wrong");
+    score-=10;
+  }
+  updateHUD();
+}
+
+function fireWave(){
+  waves.push({x:currentEnemy.x, y:H-60, speed:6});
+}
+
+function updateHUD(){
+  document.getElementById("score").textContent=score;
+  document.getElementById("lives").textContent=lives;
+  document.getElementById("fDisplay").textContent=f;
+}
+
+function gameOver(){
+  ctx.fillStyle="rgba(0,0,0,0.5)";
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#f7f1d1";
+  ctx.font="28px Arial";
+  ctx.fillText("Game Over!",W/2-80,H/2);
+}
+
+function loop(){
+  ctx.clearRect(0,0,W,H);
+
+  // ปืนแบบในภาพ
+  ctx.fillStyle="#555"; // ปืนฐาน
+  ctx.fillRect(W/2-15,H-50,30,40);
+  ctx.fillStyle="#777"; // ปืนลำกล้อง
+  ctx.fillRect(W/2-5,H-60,10,10);
+
+  // ศัตรู
+  if(currentEnemy && currentEnemy.alive){
+    currentEnemy.y += currentEnemy.v / 60; 
+    ctx.fillStyle=currentEnemy.color;
+    ctx.beginPath();
+    ctx.arc(currentEnemy.x,currentEnemy.y,20,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle="#fff";
+    ctx.font="14px Arial";
+    ctx.fillText("v="+currentEnemy.v+" m/s",currentEnemy.x-30,currentEnemy.y-30);
+    if(currentEnemy.y > H-50){
+      lives--;
+      updateHUD();
+      newEnemy();
+      if(lives<=0){gameOver(); return;}
+    }
+  }
+
+  // คลื่น
+  for(let i=waves.length-1;i>=0;i--){
+    let wv=waves[i];
+    wv.y -= wv.speed;
+    ctx.beginPath();
+    ctx.arc(wv.x,wv.y,6,0,Math.PI*2);
+    ctx.fillStyle="#f7f1d1";
+    ctx.fill();
+
+    if(currentEnemy && currentEnemy.alive && Math.abs(wv.x-currentEnemy.x)<20 && Math.abs(wv.y-currentEnemy.y)<20){
+      currentEnemy.alive=false;
+      waves.splice(i,1);
+      setTimeout(()=>newEnemy(),200);
+    } else if(wv.y < 0){
+      waves.splice(i,1);
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+updateHUD();
+newEnemy();
+loop();
+</script>
+</body>
+</html>
