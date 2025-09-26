@@ -3,32 +3,27 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Pixel Wave Defender — 70/30 Quiz</title>
+<title>Pixel Wave Defender — Retro Sprites</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#061226;--panel:#0b2030;--accent:#ffd755;--accent2:#55ddff;}
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,#031229,#021018);
-    font-family:"Press Start 2P", monospace; color:#fff}
+  :root{
+    --bg:#071022; --panel:#0c2030; --accent:#ffd755; --accent2:#55ddff;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#021026,#011018);
+    font-family:"Press Start 2P", monospace;color:#fff}
   .wrap{display:flex;flex-direction:column;align-items:center;padding:12px;gap:8px;}
-  canvas{background:linear-gradient(180deg,#02101a,#011018);image-rendering:pixelated;
-    border:6px solid #07263a;box-shadow:0 8px 40px rgba(0,0,0,0.6);border-radius:8px;}
-  .hud{display:flex;gap:12px;align-items:center;font-size:11px;text-shadow:0 0 6px rgba(0,0,0,0.6)}
+  canvas{background:linear-gradient(180deg,#01101a,#001018); image-rendering: pixelated;
+    border:6px solid #07263a; box-shadow:0 8px 40px rgba(0,0,0,0.6); border-radius:10px;}
+  .hud{display:flex;gap:12px;align-items:center;font-size:11px;text-shadow:0 0 6px rgba(0,0,0,0.6);}
   .hud .box{background:rgba(0,0,0,0.35);padding:8px 10px;border-radius:6px;border:2px solid rgba(255,255,255,0.03)}
-  .controls{margin-top:8px;width:360px;max-width:92%;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
-  .btn{background:linear-gradient(180deg,#ffd77f,#ffb84d);border:3px solid #4d2b00;
-    padding:8px 10px;border-radius:6px;font-size:11px;cursor:pointer;box-shadow:0 6px 0 #8a5a0a;}
-  .choiceBtn{background:linear-gradient(180deg,#6fe6ff,#38b0d7);color:#02121b;
-    border:3px solid #05323b;padding:6px 8px;font-size:10px;border-radius:6px;box-shadow:0 6px 0 #034d57;}
+  .controls{margin-top:8px;width:720px;max-width:96%;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .btn{background:linear-gradient(180deg,#ffd77f,#ffb84d);border:3px solid #4d2b00;padding:8px 10px;border-radius:6px;font-size:11px;cursor:pointer;box-shadow:0 6px 0 #8a5a0a;}
+  .choiceBtn{background:linear-gradient(180deg,#6fe6ff,#38b0d7);color:#02121b;border:3px solid #05323b;padding:6px 8px;font-size:10px;border-radius:6px;box-shadow:0 6px 0 #034d57;}
   .choiceBtn.correct{background:linear-gradient(180deg,#9df59a,#51c65d);box-shadow:0 6px 0 #2b8a2f;}
   .choiceBtn.wrong{background:linear-gradient(180deg,#ff9aa0,#ff5968);box-shadow:0 6px 0 #8a2b3a;}
-  .overlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;
-    background:linear-gradient(180deg,#021825,#041833);padding:16px;border-radius:10px;
-    width:92%;max-width:760px;border:4px solid rgba(255,255,255,0.03)}
-  .title{font-size:14px;color:var(--accent);text-align:center;margin-bottom:6px}
-  .sub{font-size:10px;color:#bcd;text-align:center;margin-bottom:10px}
-  .questionBox{background:#021827;padding:10px;border-radius:6px;border:2px solid rgba(255,255,255,0.03);
-    margin-bottom:8px;font-size:11px;color:#ffd}
+  .overlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;background:linear-gradient(180deg,#021825,#041833);padding:16px;border-radius:10px;width:92%;max-width:760px;border:4px solid rgba(255,255,255,0.03)}
   footer{font-size:10px;color:#89b;margin-top:8px}
+  @media (max-width:520px){ .hud{font-size:9px} .btn{padding:6px 8px;font-size:10px} .choiceBtn{font-size:10px;padding:6px 8px} }
 </style>
 </head>
 <body>
@@ -41,7 +36,8 @@
     <div class="box">ENEMY: <span id="enemyName">—</span></div>
   </div>
 
-  <canvas id="game" width="360" height="640"></canvas>
+  <canvas id="game" width="720" height="900"></canvas>
+
   <div class="controls" id="controls"></div>
 
   <div style="margin-top:6px">
@@ -50,184 +46,574 @@
     <button class="btn" id="helpBtn">❓ HELP</button>
   </div>
 
-  <footer>Pixel Monsters • λ = v/f 70% | ทฤษฎี 30% • 15s/คำถาม • 5 นาที</footer>
+  <footer>Pixel Retro • λ = v/f (70%) • ทฤษฎี (30%) • 15s/ข้อ • 5 นาที</footer>
 </div>
 
-<div id="overlayRoot" style="position:fixed;left:0;top:0;right:0;bottom:0;display:none;
-  align-items:center;justify-content:center;z-index:70"></div>
+<div id="overlayRoot" style="position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;z-index:70"></div>
 
 <script>
-/* --------------------------
-   CONFIG
-   -------------------------- */
-const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+/* ---------- Audio helpers (WebAudio) ---------- */
+let audioCtx = null;
+function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function retroBeep(freq=880, time=0.08, type='square', vol=0.12){
+  try{
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    setTimeout(()=> o.stop(), time*1000);
+  }catch(e){}
+}
+function retroBlast(time=0.25){
+  try{
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.value = 120;
+    g.gain.value = 0.14;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    const start = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.14, start);
+    g.gain.exponentialRampToValueAtTime(0.001, start + time);
+    o.frequency.exponentialRampToValueAtTime(40, start + time);
+    setTimeout(()=> o.stop(), time*1000 + 20);
+  }catch(e){}
+}
+
+/* ---------- Canvas & state ---------- */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
-// state
 let state = {
   running:false, score:0, lives:5, anim:0,
   currentEnemy:null, awaitingAnswer:false,
   globalTime:300, questionTime:15,
   correctCount:0, wrongCount:0, unansweredCount:0,
-  encounteredQuestions:[]
+  encounteredQuestions:[], waves:[], particles:[]
 };
 
-// easy numbers
+/* ---------- Pixel-sprite drawing system ---------- */
+/* We'll store sprites as small 2D arrays of color keys, then scale them up. */
+const palette = {
+  ' ': null,
+  '1': '#0f2b44', // dark
+  '2': '#55d6ff', // light cyan
+  '3': '#ffd66b', // yellow
+  '4': '#ff9e56', // orange
+  '5': '#ffffff', // white
+  '6': '#ff5d5d', // red
+  '7': '#6bf5ff', // neon
+  '8': '#b86bff', // purple
+  '9': '#4bff9e', // green
+  'A': '#05323b'  // dark accent
+};
+
+// Player sprite (24x24) — NES-style rocket (array of strings, each char = color key)
+const playerSprite = [
+"   2222222   ",
+"   2222222   ",
+"    223322   ",
+"    233332   ",
+"   23333322  ",
+"   23333322  ",
+"   23333322  ",
+"   23333322  ",
+"  223333332  ",
+"  2333333332 ",
+"  2333353332 ",
+"  2333333332 ",
+"  2333333332 ",
+"   23333332  ",
+"    233332   ",
+"    2A3A2    ",
+"   2AAAAA2   ",
+"   2A3A3A2   ",
+"    2A3A2    ",
+"     222     ",
+"     222     ",
+"     444     ",
+"    44444    ",
+"     44 4    "
+];
+// We'll treat '2' as cyan, '3' cyan-darker, '4' orange flame, '5' white, 'A' dark gray accent
+
+// Several monster sprites in similar pixel style (12x12 or 16x16 small)
+const monsterSprites = [
+{ name:'Mini Squid', matrix:[
+"  77777  ",
+" 7777777 ",
+"77 777 77",
+"77 755 77",
+"77 777 77",
+" 7777777 ",
+"  77777  ",
+"   777   ",
+"  9 9 9  ",
+"  99999  ",
+"   999   ",
+"    9    "
+], paletteMap:{'7':'#6bf5ff','5':'#05323b','9':'#4bff9e'} },
+{ name:'Tentacle Buddy', matrix:[
+"   777   ",
+"  77777  ",
+" 7777777 ",
+"777733377",
+"77 333 77",
+"77 333 77",
+"77777377 ",
+" 777377  ",
+"  7777   ",
+"  9  9   ",
+"  9999   ",
+"   99    "
+], paletteMap:{'7':'#6bf5ff','3':'#b86bff','9':'#4bff9e'} },
+{ name:'Cyclops', matrix:[
+"   6666  ",
+"  666666 ",
+" 66666666",
+"66 555 66",
+"66 555 66",
+"66 555 66",
+" 6666666 ",
+"  66666  ",
+"   666   ",
+"  9 99 9 ",
+"  99999  ",
+"   999   "
+], paletteMap:{'6':'#ff5d5d','5':'#ffffff','9':'#4bff9e'} },
+{ name:'Piranha', matrix:[
+"   8888  ",
+"  888888 ",
+" 88888888",
+"88 333 88",
+"88 333 88",
+"88 333 88",
+" 8888888 ",
+"  88888  ",
+"   888   ",
+"  99 99  ",
+"  99999  ",
+"   999   "
+], paletteMap:{'8':'#b86bff','3':'#05323b','9':'#4bff9e'} },
+{ name:'Deep Leviathan (Boss)', matrix:[
+"    666666    ",
+"   66666666   ",
+"  6666666666  ",
+" 66 555555 66 ",
+"66 5 5555 5 66",
+"66 55555555 66",
+"66 55555555 66",
+" 66 555555 66 ",
+"  6666666666  ",
+"   66666666   ",
+"    666666    ",
+"     9999     "
+], paletteMap:{'6':'#ff5d5d','5':'#ffffff','9':'#4bff9e'} }
+];
+
+// helper: draw a sprite (array of strings), top-left at (cx,cy) but centered on that point
+function drawPixelSprite(matrix, cx, cy, scale=4, paletteOverride){
+  const h = matrix.length;
+  const w = matrix[0].length;
+  const sx = Math.round(cx - (w*scale)/2);
+  const sy = Math.round(cy - (h*scale)/2);
+  for(let r=0;r<h;r++){
+    const row = matrix[r];
+    for(let c=0;c<w;c++){
+      const key = row[c] || ' ';
+      if(key === ' ') continue;
+      const color = (paletteOverride && paletteOverride[key]) || (palette[key] || '#fff');
+      ctx.fillStyle = color;
+      ctx.fillRect(sx + c*scale, sy + r*scale, scale, scale);
+    }
+  }
+}
+
+/* ---------- Questions (70% calc / 30% theory) ---------- */
 const easyF = [2,4,5,10,20];
 const easyV = [40,50,100,200];
-const monsters = [
-  {name:'Plasma Fiend 👾',color:'#ff5d5d',boss:false,points:80},
-  {name:'Neon Squid 🦑',color:'#6bf5ff',boss:false,points:70},
-  {name:'Ember Wyrm 🔥',color:'#ffb86b',boss:false,points:75},
-  {name:'Void Eye 👹',color:'#b86bff',boss:false,points:85},
-  {name:'Star Titan 👑',color:'#4bff9e',boss:true,points:200}
-];
 const theoryQ = [
-  {q:'ความถี่ (frequency) หมายถึงอะไร?',c:[
-    'จำนวนครั้งของการสั่นต่อวินาที','ระยะระหว่างยอดคลื่นสองยอด',
-    'ความเร็วคลื่น','ความสูงสุดของคลื่น'],a:0},
-  {q:'ความยาวคลื่น (wavelength) คือ?',c:[
-    'ระยะระหว่างจุดซ้ำกันของคลื่น','จำนวนการสั่นต่อวินาที',
-    'ความเร็วคลื่น','ความแรงของคลื่น'],a:0},
-  {q:'ถ้าความถี่เพิ่ม โดย v คงที่ λ จะ?',c:[
-    'สั้นลง','ยาวขึ้น','คงเดิม','ไม่สัมพันธ์'],a:0},
-  {q:'คลื่นเสียงเป็นคลื่นชนิดใด?',c:[
-    'คลื่นตามยาว','คลื่นตามขวาง','คลื่นนิ่ง','แม่เหล็กไฟฟ้า'],a:0},
-  {q:'แอมพลิจูด (amplitude) คือ?',c:[
-    'การเคลื่อนที่สูงสุดจากสมดุล','จำนวนการสั่นต่อวินาที',
-    'ระยะยอดคลื่น','ความเร็วคลื่น'],a:0}
+  {q:'ความถี่ (frequency) หมายถึงอะไร?', choices:['จำนวนครั้งของการสั่นต่อวินาที','ระยะระหว่างยอดคลื่นสองยอด','ความเร็วของคลื่น','ความสูงสุดของคลื่น'], ans:0},
+  {q:'ความยาวคลื่น (wavelength) คืออะไร?', choices:['ระยะระหว่างจุดที่เหมือนกันบนคลื่นสองตำแหน่ง','จำนวนการสั่นต่อวินาที','ความเร็วของคลื่น','พลังงานของคลื่น'], ans:0},
+  {q:'ถ้าความถี่เพิ่มขึ้น โดยความเร็วคงที่ ความยาวคลื่นจะ?', choices:['สั้นลง','ยาวขึ้น','คงเดิม','ไม่สัมพันธ์'], ans:0},
+  {q:'คลื่นเสียงเป็นคลื่นชนิดใด?', choices:['คลื่นตามยาว','คลื่นตามขวาง','คลื่นนิ่ง','คลื่นแม่เหล็กไฟฟ้า'], ans:0},
+  {q:'แอมพลิจูด (amplitude) บ่งบอกอะไร?', choices:['ขนาดการเคลื่อนที่สูงสุดจากตำแหน่งสมดุล','จำนวนคลื่นต่อวินาที','ระยะยอดคลื่น','ความเร็วของคลื่น'], ans:0}
 ];
 
-/* --------------------------
-   HELPERS
-   -------------------------- */
-function pixRect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
-function drawText(t,x,y,s=8,c='#fff',a='left'){
-  ctx.fillStyle=c;ctx.font=`${s}px "Press Start 2P"`;ctx.textAlign=a;ctx.fillText(t,x,y);
-}
-function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));
- [a[i],a[j]]=[a[j],a[i]]}return a}
-
-/* --------------------------
-   QUESTIONS
-   -------------------------- */
-function newQuestion(enemy){
-  let q;
-  if(Math.random()<0.7){ // 70% calc
+function makeQuestion(enemy){
+  // 70% calc
+  if(Math.random() < 0.7){
     const f = easyF[Math.floor(Math.random()*easyF.length)];
-    const v = easyV[Math.floor(Math.random()*easyV.length)];
-    const lambda=v/f;
-    const text=`คำนวณ λ = v/f\nv=${v} m/s, f=${f} Hz`;
-    const choices=new Set([lambda]);
-    while(choices.size<4){choices.add(lambda+(Math.floor(Math.random()*5)-2));}
-    const arr=shuffle([...choices]);
-    q={type:'calc',text,choices:arr,correct:lambda};
-  }else{ // 30% theory
-    const tq=theoryQ[Math.floor(Math.random()*theoryQ.length)];
-    const arr=shuffle([...tq.c]);
-    q={type:'theory',text:tq.q,choices:arr,correctIndex:arr.indexOf(tq.c[tq.a])};
+    // choose v divisible by f
+    const candidates = easyV.filter(v => v % f === 0);
+    const v = candidates[Math.floor(Math.random()*candidates.length)];
+    const lambda = v / f;
+    const text = `คำนวณ λ = v / f\nv = ${v} m/s, f = ${f} Hz`;
+    const choices = new Set([lambda]);
+    while(choices.size < 4){
+      // neighbour integers
+      const delta = (Math.floor(Math.random()*5)-2); // -2..+2
+      let w = lambda + delta;
+      if(w <= 0) w = lambda + Math.abs(delta) + 1;
+      choices.add(w);
+    }
+    const arr = shuffle(Array.from(choices));
+    return {type:'calc', text, choices:arr, correct: lambda};
+  } else {
+    // theory
+    const q = theoryQ[Math.floor(Math.random()*theoryQ.length)];
+    const arr = shuffle(q.choices.slice());
+    return {type:'theory', text:q.q, choices:arr, correctIndex: arr.indexOf(q.choices[q.ans])};
   }
-  state.encounteredQuestions.push({enemy:enemy.name,q});
-  return q;
 }
 
-/* --------------------------
-   ENEMY
-   -------------------------- */
-function spawnEnemy(){
-  const m=monsters[Math.floor(Math.random()*monsters.length)];
-  state.currentEnemy={x:W/2,y:120,color:m.color,name:m.name,points:m.points,hp:m.boss?3:1};
-  const q=newQuestion(state.currentEnemy);
-  state.currentQuestion=q;
-  state.awaitingAnswer=true;
-  renderChoices(q);
-  state.questionTime=15;
+/* ---------- Monster management ---------- */
+function spawnMonster(){
+  if(state.currentEnemy) return;
+  // pick sprite (one of monsterSprites)
+  const idx = Math.floor(Math.random()*monsterSprites.length);
+  const m = monsterSprites[idx];
+  const isBoss = m.name.includes('Boss') || m.matrix[0].length > 12;
+  const enemy = {
+    sprite: m.matrix,
+    paletteMap: Object.assign({}, palette, m.paletteMap),
+    x: W/2,
+    y: 140,
+    scale: isBoss ? 6 : 5,
+    name: m.name,
+    hp: isBoss ? 3 : 1,
+    points: isBoss ? 200 : 80
+  };
+  state.currentEnemy = enemy;
+  // prepare question
+  const q = makeQuestion(enemy);
+  state.currentQuestion = q;
+  state.awaitingAnswer = true;
+  state.questionTime = 15;
+  state.encounteredQuestions.push({enemy: enemy.name, q});
+  renderChoices(q, enemy);
+  // small sound
+  retroBeep(1000, 0.06, 'square', 0.06);
 }
 
-/* --------------------------
-   CHOICES UI
-   -------------------------- */
-const controls=document.getElementById('controls');
-function renderChoices(q){
-  controls.innerHTML='';
-  const qb=document.createElement('div');
-  qb.className='questionBox';
-  qb.innerText=q.text;controls.appendChild(qb);
-  q.choices.forEach((c,i)=>{
-    const b=document.createElement('button');b.className='choiceBtn';
-    b.innerText=(q.type==='calc'?`λ=${c} m`:c);
-    b.onclick=()=>answer(q,c,i,b);controls.appendChild(b);
-  });
-}
-function answer(q,choice,i,btn){
-  if(!state.awaitingAnswer)return;
-  state.awaitingAnswer=false;
-  let correct=false;
-  if(q.type==='calc'){correct=(choice===q.correct);}
-  else{correct=(i===q.correctIndex);}
-  if(correct){btn.classList.add('correct');state.score+=state.currentEnemy.points;state.correctCount++;}
-  else{btn.classList.add('wrong');state.lives--;state.wrongCount++;}
-  setTimeout(()=>{state.currentEnemy=null;controls.innerHTML='';if(state.lives<=0)endGame();},700);
+/* ---------- UI: render choices ---------- */
+const controls = document.getElementById('controls');
+function renderChoices(q, enemy){
+  controls.innerHTML = '';
+  const qb = document.createElement('div');
+  qb.className = 'questionBox';
+  qb.style.width = '100%';
+  qb.style.whiteSpace = 'pre-wrap';
+  qb.innerText = q.text;
+  controls.appendChild(qb);
+  for(let i=0;i<q.choices.length;i++){
+    const ch = q.choices[i];
+    const btn = document.createElement('button');
+    btn.className = 'choiceBtn';
+    btn.style.minWidth = '160px';
+    btn.style.margin = '6px';
+    btn.innerText = (q.type==='calc'? `λ = ${ch} m` : ch);
+    btn.onclick = ()=> onAnswer(q,ch,i,btn);
+    controls.appendChild(btn);
+  }
 }
 
-/* --------------------------
-   GAME LOOP
-   -------------------------- */
-function updateHUD(){
-  document.getElementById('score').innerText=state.score;
-  document.getElementById('lives').innerText=state.lives;
-  document.getElementById('enemyName').innerText=state.currentEnemy?state.currentEnemy.name:'—';
-  const mm=String(Math.floor(state.globalTime/60)).padStart(2,'0');
-  const ss=String(state.globalTime%60).padStart(2,'0');
-  document.getElementById('globalTimer').innerText=`${mm}:${ss}`;
-  document.getElementById('questionTimer').innerText=state.questionTime;
-}
-function loop(){
-  if(!state.running)return;
-  ctx.fillStyle='#011022';ctx.fillRect(0,0,W,H);
-  for(let i=0;i<40;i++){pixRect((i*37+state.anim)%W,(i*53+state.anim*2)%H,1,1,'#9fe6ff');}
-  if(state.currentEnemy){
-    const e=state.currentEnemy;
-    for(let r=0;r<5;r++){pixRect(e.x-16,e.y-12+r*4,32,3,e.color);}
-    pixRect(e.x-6,e.y-6,4,4,'#000');pixRect(e.x+2,e.y-6,4,4,'#000');
-  }else{spawnEnemy();}
-  drawText('λ=v/f',8,14,9,'#ffd07a','left');
-  state.anim++;
+/* ---------- Answer handling ---------- */
+function onAnswer(q, choice, idx, btnEl){
+  if(!state.awaitingAnswer) return;
+  state.awaitingAnswer = false;
+  // disable buttons
+  Array.from(document.querySelectorAll('.choiceBtn')).forEach(b=>b.disabled=true);
+  let correct = false;
+  if(q.type === 'calc'){ correct = (choice === q.correct); }
+  else { correct = (idx === q.correctIndex); }
+  if(correct){
+    btnEl.classList.add('correct');
+    state.score += state.currentEnemy.points;
+    state.correctCount++;
+    // fire wave (player centered)
+    firePlayerWave(state.currentEnemy.x, state.currentEnemy.y);
+    // enemy damaged
+    state.currentEnemy.hp--;
+    retroBeep(1200, 0.08, 'sawtooth', 0.09);
+    if(state.currentEnemy.hp <= 0){
+      // explosion
+      createPixelExplosion(state.currentEnemy.x, state.currentEnemy.y, state.currentEnemy.paletteMap['9'] || '#4bff9e', 28);
+      state.currentEnemy = null;
+      setTimeout(()=>{ if(state.running) spawnMonster(); }, 700);
+    } else {
+      // still alive: small damage effect then continue
+      createPixelExplosion(state.currentEnemy.x, state.currentEnemy.y, '#ff9e56', 12);
+      setTimeout(()=>{ if(state.running) spawnMonster(); }, 900);
+    }
+  } else {
+    btnEl.classList.add('wrong');
+    state.wrongCount++;
+    state.lives = Math.max(0, state.lives - 1);
+    // player blink red
+    blinkPlayer();
+    retroBeep(220, 0.14, 'sine', 0.16);
+    if(state.lives <= 0){ setTimeout(()=> endGame(), 400); return; }
+    setTimeout(()=>{ state.currentEnemy = null; controls.innerHTML=''; if(state.running) spawnMonster(); }, 800);
+  }
   updateHUD();
-  requestAnimationFrame(loop);
 }
 
-/* --------------------------
-   START/END
-   -------------------------- */
-document.getElementById('startBtn').onclick=()=>{
-  state.running=true;state.score=0;state.lives=5;state.globalTime=300;
-  state.correctCount=0;state.wrongCount=0;state.unansweredCount=0;
-  state.encounteredQuestions=[];controls.innerHTML='';spawnEnemy();loop();
-  setInterval(()=>{if(state.running){state.globalTime--;state.questionTime--;
-    if(state.questionTime<=0){state.unansweredCount++;state.lives--;state.awaitingAnswer=false;state.currentEnemy=null;controls.innerHTML='';}
-    if(state.globalTime<=0||state.lives<=0)endGame();updateHUD();}},1000);
-};
-function endGame(){
-  state.running=false;
-  const overlay=document.createElement('div');overlay.className='overlay';
-  overlay.innerHTML=`
-    <div class="title">🏁 GAME OVER</div>
-    <div class="sub">SCORE: ${state.score} | ถูก: ${state.correctCount} | ผิด: ${state.wrongCount} | ไม่ตอบ: ${state.unansweredCount}</div>
-    <div style="font-size:11px;color:#ffd;margin-top:8px;text-align:left">
-      สูตรสำคัญ: λ = v / f<br>
-      λ = ความยาวคลื่น, v = ความเร็ว, f = ความถี่.<br>
-      ถ้าความถี่เพิ่มขึ้น (v คงที่) → λ สั้นลง
-    </div>
-    <div style="margin-top:8px;font-size:10px;color:#9fe6ff">คำถามที่เจอ:</div>
-    <ul style="font-size:10px;color:#fff;max-height:120px;overflow:auto">
-      ${state.encounteredQuestions.slice(-6).map(q=>`<li>${q.enemy}: ${q.q.text}</li>`).join('')}
-    </ul>
-    <div style="margin-top:12px;text-align:center"><button class="btn" onclick="location.reload()">เล่นใหม่</button></div>
-  `;
-  document.getElementById('overlayRoot').style.display='flex';
-  document.getElementById('overlayRoot').appendChild(overlay);
+/* ---------- Player: static center ship, blink on damage ---------- */
+let playerBlink = 0;
+function blinkPlayer(){
+  playerBlink = 8; // frames to blink
+  createPixelExplosion(W/2, H-140, '#ff6b6b', 10);
 }
+
+/* ---------- Waves (laser) ---------- */
+function firePlayerWave(tx, ty){
+  const startX = W/2;
+  const startY = H - 120;
+  const dx = tx - startX, dy = ty - startY;
+  const angle = Math.atan2(dy, dx);
+  state.waves.push({ x:startX, y:startY, angle, speed:10, phase:0 });
+  retroBeep(1800, 0.06, 'square', 0.08);
+}
+
+/* ---------- Particles (pixel explosion) ---------- */
+function createPixelExplosion(x,y,color,count=18){
+  for(let i=0;i<count;i++){
+    state.particles.push({
+      x, y,
+      vx:(Math.random()-0.5)*6,
+      vy:(Math.random()-0.5)*6,
+      life:20 + Math.random()*30,
+      color
+    });
+  }
+  retroBlast(0.18);
+}
+
+/* ---------- HUD ---------- */
+function updateHUD(){
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('lives').textContent = state.lives;
+  document.getElementById('enemyName').textContent = state.currentEnemy?state.currentEnemy.name:'—';
+  const mm = String(Math.floor(state.globalTime/60)).padStart(2,'0');
+  const ss = String(state.globalTime%60).padStart(2,'0');
+  document.getElementById('globalTimer').textContent = `${mm}:${ss}`;
+  document.getElementById('questionTimer').textContent = state.questionTime;
+}
+
+/* ---------- Render loop ---------- */
+function render(){
+  // background
+  ctx.fillStyle = '#001022';
+  ctx.fillRect(0,0,W,H);
+
+  // starfield
+  for(let i=0;i<120;i++){
+    const sx = (i*37 + state.anim*2) % W;
+    const sy = (i*53 + state.anim*3) % H;
+    ctx.fillStyle = (i%9===0)?'#bfefff':'#11314a';
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // draw current enemy sprite (centered near top)
+  if(state.currentEnemy){
+    const e = state.currentEnemy;
+    drawPixelSprite(e.sprite, e.x, e.y, e.scale, e.paletteMap);
+  }
+
+  // draw player centered at bottom
+  // adjust blink visual
+  const playerY = H - 110;
+  const playerScale = 4;
+  const spriteToDraw = playerSprite;
+  // if blinking, temporarily override palette (red flash)
+  if(playerBlink > 0){
+    const override = Object.assign({}, palette, {'2':'#ff6b6b','3':'#ff6b6b','4':'#ff6b6b','A':'#330000'});
+    drawPixelSprite(spriteToDraw, W/2, playerY, playerScale, override);
+    playerBlink--;
+  } else {
+    drawPixelSprite(spriteToDraw, W/2, playerY, playerScale, palette);
+  }
+
+  // draw waves (laser beams)
+  for(let i=state.waves.length-1;i>=0;i--){
+    const w = state.waves[i];
+    w.x += Math.cos(w.angle) * w.speed;
+    w.y += Math.sin(w.angle) * w.speed;
+    w.phase += 0.4;
+    // trail
+    ctx.strokeStyle = 'rgba(85,214,255,0.9)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(w.x - Math.cos(w.angle)*8, w.y - Math.sin(w.angle)*8);
+    ctx.lineTo(w.x + Math.cos(w.angle)*8, w.y + Math.sin(w.angle)*8);
+    ctx.stroke();
+    // collision with enemy
+    if(state.currentEnemy){
+      const dx = w.x - state.currentEnemy.x;
+      const dy = w.y - state.currentEnemy.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if(d < 30){
+        // hit: damage handled elsewhere when answering correct; but also remove wave and create splash
+        createPixelExplosion(state.currentEnemy.x, state.currentEnemy.y, '#ffffff', 8);
+        state.waves.splice(i,1);
+        continue;
+      }
+    }
+    // remove if offscreen
+    if(w.x < -50 || w.x > W+50 || w.y < -50 || w.y > H+50){
+      state.waves.splice(i,1);
+    }
+  }
+
+  // particles
+  for(let i=state.particles.length-1;i>=0;i--){
+    const p = state.particles[i];
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 3, 3);
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.12;
+    p.vx *= 0.98; p.vy *= 0.98;
+    p.life--;
+    if(p.life <= 0) state.particles.splice(i,1);
+  }
+
+  // HUD text small inside canvas
+  ctx.fillStyle = '#ffdba6';
+  ctx.font = '10px "Press Start 2P"';
+  ctx.textAlign = 'left';
+  ctx.fillText('λ = v / f', 12, 18);
+  ctx.fillStyle = '#a6d8ff';
+  ctx.textAlign = 'right';
+  ctx.fillText('ตอบให้ทัน 15s', W-12, 18);
+
+  state.anim++;
+}
+
+/* ---------- Game loop & timers ---------- */
+let mainLoopHandle = null;
+function gameLoop(){
+  if(!state.running) return;
+  render();
+  mainLoopHandle = requestAnimationFrame(gameLoop);
+}
+
+let tickHandle = null;
+function startTimers(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(()=>{
+    if(!state.running) return;
+    // global timer
+    state.globalTime--;
+    // per-question timer
+    if(state.awaitingAnswer){
+      state.questionTime--;
+      if(state.questionTime <= 0){
+        // unanswered
+        state.unansweredCount++;
+        state.lives = Math.max(0, state.lives - 1);
+        state.awaitingAnswer = false;
+        // reveal miss effect
+        blinkPlayer();
+        createPixelExplosion(W/2, H-300, '#ff8a8a', 12);
+        controls.innerHTML = '';
+        state.currentEnemy = null;
+        setTimeout(()=>{ if(state.running) spawnMonster(); }, 700);
+      }
+    }
+    updateHUD();
+    if(state.globalTime <= 0 || state.lives <= 0){
+      endGame();
+    }
+  }, 1000);
+}
+
+/* ---------- Start / pause / end ---------- */
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  if(!state.running) startGame();
+  else { /* restart */ location.reload(); }
+});
+document.getElementById('pauseBtn').addEventListener('click', ()=>{
+  state.running = !state.running;
+  if(state.running){ startTimers(); gameLoop(); document.getElementById('pauseBtn').innerText='⏸️ PAUSE'; }
+  else { if(tickHandle) clearInterval(tickHandle); if(mainLoopHandle) cancelAnimationFrame(mainLoopHandle); document.getElementById('pauseBtn').innerText='▶️ RESUME'; }
+});
+document.getElementById('helpBtn').addEventListener('click', ()=> showHelp());
+
+function startGame(){
+  state.running = true;
+  state.score = 0; state.lives = 5; state.globalTime = 300; state.questionTime = 15;
+  state.correctCount = 0; state.wrongCount = 0; state.unansweredCount = 0;
+  state.encounteredQuestions = []; state.waves = []; state.particles = []; state.currentEnemy = null;
+  updateHUD();
+  spawnMonster();
+  startTimers();
+  gameLoop();
+  retroBeep(880, 0.07, 'square', 0.08);
+  document.getElementById('startBtn').innerText = '↻ RESTART';
+}
+
+/* ---------- End game overlay ---------- */
+function endGame(){
+  state.running = false;
+  if(tickHandle) clearInterval(tickHandle);
+  if(mainLoopHandle) cancelAnimationFrame(mainLoopHandle);
+  // overlay summary
+  const overlay = document.createElement('div'); overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div style="text-align:center">
+      <div style="font-size:18px;color:var(--accent)">🏁 TIME'S UP / GAME OVER</div>
+      <div style="color:#a6d8ff;margin-top:6px">คะแนน: ${state.score} &nbsp;|&nbsp; ถูก: ${state.correctCount} &nbsp;|&nbsp; ผิด: ${state.wrongCount} &nbsp;|&nbsp; ไม่ตอบ: ${state.unansweredCount}</div>
+      <div style="background:#021827;padding:12px;border-radius:8px;margin-top:12px;color:#ffd;text-align:left;font-size:11px">
+        <div style="font-weight:bold;color:#ffd07a">สรุปสั้น ๆ เรื่องคลื่น (ม.5)</div>
+        <div style="margin-top:6px">
+          สูตร: <strong>λ = v / f</strong><br>
+          λ = ความยาวคลื่น (m), v = ความเร็วคลื่น (m/s), f = ความถี่ (Hz).<br>
+          ถ้าความถี่เพิ่มขึ้น (เมื่อ v คงที่) → ความยาวคลื่นจะสั้นลง.
+        </div>
+        <div style="margin-top:8px;font-weight:bold;color:#a6d8ff">ตัวอย่างคำถามที่เจอ</div>
+        <ul style="color:#fff;font-size:12px;max-height:140px;overflow:auto;padding-left:18px">
+          ${state.encounteredQuestions.slice(-8).map(it=>`<li><strong>${it.enemy}</strong>: ${escapeHtml(it.q.text).replace(/\n/g,' ')} </li>`).join('')}
+        </ul>
+      </div>
+      <div style="margin-top:12px"><button class="btn" id="playAgain">เล่นอีกครั้ง</button></div>
+    </div>
+  `;
+  const root = document.getElementById('overlayRoot'); root.style.display='flex'; root.innerHTML=''; root.appendChild(overlay);
+  document.getElementById('playAgain').addEventListener('click', ()=> { root.style.display='none'; startGame(); });
+}
+
+/* ---------- Overlay helpers ---------- */
+function showHelp(){
+  const html = `
+    <div style="padding:8px;color:#bcd">
+      <div style="font-size:16px;color:var(--accent);text-align:center">วิธีเล่น</div>
+      <div style="margin-top:8px">• เอเลี่ยนโผล่มาทีละตัว — คุณมี 15 วินาทีตอบแต่ละข้อ<br>• ตอบถูก → ยานจะยิงเลเซอร์ทำลายศัตรูและได้คะแนน<br>• ตอบผิดหรือไม่ตอบ → เสียชีวิต 1 หน่วย<br>• เวลาเล่นรวม 5 นาที</div>
+      <div style="margin-top:10px;font-weight:bold">โจทย์: 70% คำนวณ (λ = v/f), 30% ทฤษฎี (ม.5)</div>
+      <div style="text-align:center;margin-top:12px"><button class="btn" id="closeHelp">ปิด</button></div>
+    </div>`;
+  const root = document.getElementById('overlayRoot'); root.style.display='flex'; root.innerHTML = `<div class="overlay">${html}</div>`;
+  document.getElementById('closeHelp').addEventListener('click', ()=> { root.style.display='none'; });
+}
+
+/* ---------- Utility ---------- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ---------- Init ---------- */
+updateHUD();
+render(); // initial draw
+
+// first action: unlock audio on user gesture
+window.addEventListener('pointerdown', ()=> { try{ ensureAudio(); }catch(e){} }, {once:true});
+
 </script>
 </body>
 </html>
