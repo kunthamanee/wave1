@@ -1,188 +1,233 @@
 <!doctype html>
 <html lang="th">
 <head>
-<meta charset="utf-8">
-<title>Wave Shooter</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pixel Wave Defender — 70/30 Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-  body{
-    margin:0;
-    font-family:"Arial","Helvetica",sans-serif;
-    background:#0d2a4d;
-    color:#f7f1d1;
-    text-align:center;
-  }
-  canvas{
-    display:block;
-    margin:0 auto;
-    border-radius:12px;
-    width:100%;
-    max-width:500px;
-    height:600px;
-    background:#0d2a4d;
-  }
-  h1{
-    margin:10px 0;
-    color:#f7f1d1;
-  }
-  #controls{margin:12px}
-  .btn{
-    padding:10px 16px;
-    margin:6px;
-    border:none;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-    background:#1f3c70;
-    color:#f7f1d1;
-  }
-  .correct{background:#8df59a}
-  .wrong{background:#f77a7a}
-  .hud{margin:10px;font-size:18px}
+  :root{--bg:#061226;--panel:#0b2030;--accent:#ffd755;--accent2:#55ddff;}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#031229,#021018);
+    font-family:"Press Start 2P", monospace; color:#fff}
+  .wrap{display:flex;flex-direction:column;align-items:center;padding:12px;gap:8px;}
+  canvas{background:linear-gradient(180deg,#02101a,#011018);image-rendering:pixelated;
+    border:6px solid #07263a;box-shadow:0 8px 40px rgba(0,0,0,0.6);border-radius:8px;}
+  .hud{display:flex;gap:12px;align-items:center;font-size:11px;text-shadow:0 0 6px rgba(0,0,0,0.6)}
+  .hud .box{background:rgba(0,0,0,0.35);padding:8px 10px;border-radius:6px;border:2px solid rgba(255,255,255,0.03)}
+  .controls{margin-top:8px;width:360px;max-width:92%;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .btn{background:linear-gradient(180deg,#ffd77f,#ffb84d);border:3px solid #4d2b00;
+    padding:8px 10px;border-radius:6px;font-size:11px;cursor:pointer;box-shadow:0 6px 0 #8a5a0a;}
+  .choiceBtn{background:linear-gradient(180deg,#6fe6ff,#38b0d7);color:#02121b;
+    border:3px solid #05323b;padding:6px 8px;font-size:10px;border-radius:6px;box-shadow:0 6px 0 #034d57;}
+  .choiceBtn.correct{background:linear-gradient(180deg,#9df59a,#51c65d);box-shadow:0 6px 0 #2b8a2f;}
+  .choiceBtn.wrong{background:linear-gradient(180deg,#ff9aa0,#ff5968);box-shadow:0 6px 0 #8a2b3a;}
+  .overlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;
+    background:linear-gradient(180deg,#021825,#041833);padding:16px;border-radius:10px;
+    width:92%;max-width:760px;border:4px solid rgba(255,255,255,0.03)}
+  .title{font-size:14px;color:var(--accent);text-align:center;margin-bottom:6px}
+  .sub{font-size:10px;color:#bcd;text-align:center;margin-bottom:10px}
+  .questionBox{background:#021827;padding:10px;border-radius:6px;border:2px solid rgba(255,255,255,0.03);
+    margin-bottom:8px;font-size:11px;color:#ffd}
+  footer{font-size:10px;color:#89b;margin-top:8px}
 </style>
 </head>
 <body>
-<h1>Wave Shooter</h1>
-<canvas id="c" width="400" height="600"></canvas>
-<div class="hud">
-  <span>Score: <span id="score">0</span></span> |
-  <span>Lives: <span id="lives">5</span></span> |
-  <span>f = <span id="fDisplay">10</span> Hz</span>
+<div class="wrap">
+  <div class="hud">
+    <div class="box">SCORE: <span id="score">0</span></div>
+    <div class="box">LIVES: <span id="lives">5</span></div>
+    <div class="box">TIME LEFT: <span id="globalTimer">05:00</span></div>
+    <div class="box">Q TIME: <span id="questionTimer">15</span>s</div>
+    <div class="box">ENEMY: <span id="enemyName">—</span></div>
+  </div>
+
+  <canvas id="game" width="360" height="640"></canvas>
+  <div class="controls" id="controls"></div>
+
+  <div style="margin-top:6px">
+    <button class="btn" id="startBtn">▶️ START (5 นาที)</button>
+    <button class="btn" id="pauseBtn">⏸️ PAUSE</button>
+    <button class="btn" id="helpBtn">❓ HELP</button>
+  </div>
+
+  <footer>Pixel Monsters • λ = v/f 70% | ทฤษฎี 30% • 15s/คำถาม • 5 นาที</footer>
 </div>
-<div id="controls"></div>
+
+<div id="overlayRoot" style="position:fixed;left:0;top:0;right:0;bottom:0;display:none;
+  align-items:center;justify-content:center;z-index:70"></div>
+
 <script>
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+/* --------------------------
+   CONFIG
+   -------------------------- */
+const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
-let score=0, lives=5;
-let f=10; 
-let currentEnemy=null;
-let answered=false, totalDefeated=0;
+// state
+let state = {
+  running:false, score:0, lives:5, anim:0,
+  currentEnemy:null, awaitingAnswer:false,
+  globalTime:300, questionTime:15,
+  correctCount:0, wrongCount:0, unansweredCount:0,
+  encounteredQuestions:[]
+};
 
-let waves=[]; // เก็บคลื่นยิง
+// easy numbers
+const easyF = [2,4,5,10,20];
+const easyV = [40,50,100,200];
+const monsters = [
+  {name:'Plasma Fiend 👾',color:'#ff5d5d',boss:false,points:80},
+  {name:'Neon Squid 🦑',color:'#6bf5ff',boss:false,points:70},
+  {name:'Ember Wyrm 🔥',color:'#ffb86b',boss:false,points:75},
+  {name:'Void Eye 👹',color:'#b86bff',boss:false,points:85},
+  {name:'Star Titan 👑',color:'#4bff9e',boss:true,points:200}
+];
+const theoryQ = [
+  {q:'ความถี่ (frequency) หมายถึงอะไร?',c:[
+    'จำนวนครั้งของการสั่นต่อวินาที','ระยะระหว่างยอดคลื่นสองยอด',
+    'ความเร็วคลื่น','ความสูงสุดของคลื่น'],a:0},
+  {q:'ความยาวคลื่น (wavelength) คือ?',c:[
+    'ระยะระหว่างจุดซ้ำกันของคลื่น','จำนวนการสั่นต่อวินาที',
+    'ความเร็วคลื่น','ความแรงของคลื่น'],a:0},
+  {q:'ถ้าความถี่เพิ่ม โดย v คงที่ λ จะ?',c:[
+    'สั้นลง','ยาวขึ้น','คงเดิม','ไม่สัมพันธ์'],a:0},
+  {q:'คลื่นเสียงเป็นคลื่นชนิดใด?',c:[
+    'คลื่นตามยาว','คลื่นตามขวาง','คลื่นนิ่ง','แม่เหล็กไฟฟ้า'],a:0},
+  {q:'แอมพลิจูด (amplitude) คือ?',c:[
+    'การเคลื่อนที่สูงสุดจากสมดุล','จำนวนการสั่นต่อวินาที',
+    'ระยะยอดคลื่น','ความเร็วคลื่น'],a:0}
+];
 
-// สีศัตรูเหมือนภาพ
-const enemyColors = ["#4CAF50","#2196F3","#F44336"];
-
-function newEnemy(){
-  answered=false;
-  const v=50 + Math.floor(Math.random()*150); 
-  const lambda=v/f;
-  const x=Math.random()*(W-40)+20;
-  const color = enemyColors[Math.floor(Math.random()*enemyColors.length)];
-  currentEnemy={x, y:-20, v, lambda, alive:true, color};
-  makeChoices(lambda);
+/* --------------------------
+   HELPERS
+   -------------------------- */
+function pixRect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+function drawText(t,x,y,s=8,c='#fff',a='left'){
+  ctx.fillStyle=c;ctx.font=`${s}px "Press Start 2P"`;ctx.textAlign=a;ctx.fillText(t,x,y);
 }
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));
+ [a[i],a[j]]=[a[j],a[i]]}return a}
 
-function makeChoices(correct){
-  const container=document.getElementById("controls");
-  container.innerHTML="";
-  let choices=[correct];
-  while(choices.length<3){
-    let wrong=correct + (Math.floor(Math.random()*5)-2)*5;
-    if(wrong<=0) continue;
-    if(!choices.includes(wrong)) choices.push(wrong);
+/* --------------------------
+   QUESTIONS
+   -------------------------- */
+function newQuestion(enemy){
+  let q;
+  if(Math.random()<0.7){ // 70% calc
+    const f = easyF[Math.floor(Math.random()*easyF.length)];
+    const v = easyV[Math.floor(Math.random()*easyV.length)];
+    const lambda=v/f;
+    const text=`คำนวณ λ = v/f\nv=${v} m/s, f=${f} Hz`;
+    const choices=new Set([lambda]);
+    while(choices.size<4){choices.add(lambda+(Math.floor(Math.random()*5)-2));}
+    const arr=shuffle([...choices]);
+    q={type:'calc',text,choices:arr,correct:lambda};
+  }else{ // 30% theory
+    const tq=theoryQ[Math.floor(Math.random()*theoryQ.length)];
+    const arr=shuffle([...tq.c]);
+    q={type:'theory',text:tq.q,choices:arr,correctIndex:arr.indexOf(tq.c[tq.a])};
   }
-  choices.sort(()=>Math.random()-0.5);
-  for(let val of choices){
-    const btn=document.createElement("button");
-    btn.textContent="λ = "+val+" m";
-    btn.className="btn";
-    btn.onclick=()=>checkAnswer(val,correct,btn);
-    container.appendChild(btn);
-  }
+  state.encounteredQuestions.push({enemy:enemy.name,q});
+  return q;
 }
 
-function checkAnswer(val,correct,btn){
-  if(answered) return;
-  answered=true;
-  if(val===correct){
-    btn.classList.add("correct");
-    score+=50;
-    totalDefeated++;
-    fireWave();
-    setTimeout(()=>{
-      if(totalDefeated%5===0){
-        f=[10,20,25,50][(totalDefeated/5)%4]||10;
-      }
-    },1000);
-  }else{
-    btn.classList.add("wrong");
-    score-=10;
-  }
-  updateHUD();
+/* --------------------------
+   ENEMY
+   -------------------------- */
+function spawnEnemy(){
+  const m=monsters[Math.floor(Math.random()*monsters.length)];
+  state.currentEnemy={x:W/2,y:120,color:m.color,name:m.name,points:m.points,hp:m.boss?3:1};
+  const q=newQuestion(state.currentEnemy);
+  state.currentQuestion=q;
+  state.awaitingAnswer=true;
+  renderChoices(q);
+  state.questionTime=15;
 }
 
-function fireWave(){
-  waves.push({x:currentEnemy.x, y:H-60, speed:6});
+/* --------------------------
+   CHOICES UI
+   -------------------------- */
+const controls=document.getElementById('controls');
+function renderChoices(q){
+  controls.innerHTML='';
+  const qb=document.createElement('div');
+  qb.className='questionBox';
+  qb.innerText=q.text;controls.appendChild(qb);
+  q.choices.forEach((c,i)=>{
+    const b=document.createElement('button');b.className='choiceBtn';
+    b.innerText=(q.type==='calc'?`λ=${c} m`:c);
+    b.onclick=()=>answer(q,c,i,b);controls.appendChild(b);
+  });
+}
+function answer(q,choice,i,btn){
+  if(!state.awaitingAnswer)return;
+  state.awaitingAnswer=false;
+  let correct=false;
+  if(q.type==='calc'){correct=(choice===q.correct);}
+  else{correct=(i===q.correctIndex);}
+  if(correct){btn.classList.add('correct');state.score+=state.currentEnemy.points;state.correctCount++;}
+  else{btn.classList.add('wrong');state.lives--;state.wrongCount++;}
+  setTimeout(()=>{state.currentEnemy=null;controls.innerHTML='';if(state.lives<=0)endGame();},700);
 }
 
+/* --------------------------
+   GAME LOOP
+   -------------------------- */
 function updateHUD(){
-  document.getElementById("score").textContent=score;
-  document.getElementById("lives").textContent=lives;
-  document.getElementById("fDisplay").textContent=f;
+  document.getElementById('score').innerText=state.score;
+  document.getElementById('lives').innerText=state.lives;
+  document.getElementById('enemyName').innerText=state.currentEnemy?state.currentEnemy.name:'—';
+  const mm=String(Math.floor(state.globalTime/60)).padStart(2,'0');
+  const ss=String(state.globalTime%60).padStart(2,'0');
+  document.getElementById('globalTimer').innerText=`${mm}:${ss}`;
+  document.getElementById('questionTimer').innerText=state.questionTime;
 }
-
-function gameOver(){
-  ctx.fillStyle="rgba(0,0,0,0.5)";
-  ctx.fillRect(0,0,W,H);
-  ctx.fillStyle="#f7f1d1";
-  ctx.font="28px Arial";
-  ctx.fillText("Game Over!",W/2-80,H/2);
-}
-
 function loop(){
-  ctx.clearRect(0,0,W,H);
-
-  // ปืนแบบในภาพ
-  ctx.fillStyle="#555"; // ปืนฐาน
-  ctx.fillRect(W/2-15,H-50,30,40);
-  ctx.fillStyle="#777"; // ปืนลำกล้อง
-  ctx.fillRect(W/2-5,H-60,10,10);
-
-  // ศัตรู
-  if(currentEnemy && currentEnemy.alive){
-    currentEnemy.y += currentEnemy.v / 60; 
-    ctx.fillStyle=currentEnemy.color;
-    ctx.beginPath();
-    ctx.arc(currentEnemy.x,currentEnemy.y,20,0,Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle="#fff";
-    ctx.font="14px Arial";
-    ctx.fillText("v="+currentEnemy.v+" m/s",currentEnemy.x-30,currentEnemy.y-30);
-    if(currentEnemy.y > H-50){
-      lives--;
-      updateHUD();
-      newEnemy();
-      if(lives<=0){gameOver(); return;}
-    }
-  }
-
-  // คลื่น
-  for(let i=waves.length-1;i>=0;i--){
-    let wv=waves[i];
-    wv.y -= wv.speed;
-    ctx.beginPath();
-    ctx.arc(wv.x,wv.y,6,0,Math.PI*2);
-    ctx.fillStyle="#f7f1d1";
-    ctx.fill();
-
-    if(currentEnemy && currentEnemy.alive && Math.abs(wv.x-currentEnemy.x)<20 && Math.abs(wv.y-currentEnemy.y)<20){
-      currentEnemy.alive=false;
-      waves.splice(i,1);
-      setTimeout(()=>newEnemy(),200);
-    } else if(wv.y < 0){
-      waves.splice(i,1);
-    }
-  }
-
+  if(!state.running)return;
+  ctx.fillStyle='#011022';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<40;i++){pixRect((i*37+state.anim)%W,(i*53+state.anim*2)%H,1,1,'#9fe6ff');}
+  if(state.currentEnemy){
+    const e=state.currentEnemy;
+    for(let r=0;r<5;r++){pixRect(e.x-16,e.y-12+r*4,32,3,e.color);}
+    pixRect(e.x-6,e.y-6,4,4,'#000');pixRect(e.x+2,e.y-6,4,4,'#000');
+  }else{spawnEnemy();}
+  drawText('λ=v/f',8,14,9,'#ffd07a','left');
+  state.anim++;
+  updateHUD();
   requestAnimationFrame(loop);
 }
 
-updateHUD();
-newEnemy();
-loop();
+/* --------------------------
+   START/END
+   -------------------------- */
+document.getElementById('startBtn').onclick=()=>{
+  state.running=true;state.score=0;state.lives=5;state.globalTime=300;
+  state.correctCount=0;state.wrongCount=0;state.unansweredCount=0;
+  state.encounteredQuestions=[];controls.innerHTML='';spawnEnemy();loop();
+  setInterval(()=>{if(state.running){state.globalTime--;state.questionTime--;
+    if(state.questionTime<=0){state.unansweredCount++;state.lives--;state.awaitingAnswer=false;state.currentEnemy=null;controls.innerHTML='';}
+    if(state.globalTime<=0||state.lives<=0)endGame();updateHUD();}},1000);
+};
+function endGame(){
+  state.running=false;
+  const overlay=document.createElement('div');overlay.className='overlay';
+  overlay.innerHTML=`
+    <div class="title">🏁 GAME OVER</div>
+    <div class="sub">SCORE: ${state.score} | ถูก: ${state.correctCount} | ผิด: ${state.wrongCount} | ไม่ตอบ: ${state.unansweredCount}</div>
+    <div style="font-size:11px;color:#ffd;margin-top:8px;text-align:left">
+      สูตรสำคัญ: λ = v / f<br>
+      λ = ความยาวคลื่น, v = ความเร็ว, f = ความถี่.<br>
+      ถ้าความถี่เพิ่มขึ้น (v คงที่) → λ สั้นลง
+    </div>
+    <div style="margin-top:8px;font-size:10px;color:#9fe6ff">คำถามที่เจอ:</div>
+    <ul style="font-size:10px;color:#fff;max-height:120px;overflow:auto">
+      ${state.encounteredQuestions.slice(-6).map(q=>`<li>${q.enemy}: ${q.q.text}</li>`).join('')}
+    </ul>
+    <div style="margin-top:12px;text-align:center"><button class="btn" onclick="location.reload()">เล่นใหม่</button></div>
+  `;
+  document.getElementById('overlayRoot').style.display='flex';
+  document.getElementById('overlayRoot').appendChild(overlay);
+}
 </script>
 </body>
 </html>
